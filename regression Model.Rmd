@@ -45,20 +45,6 @@ head(mtcars)
 ```
 
 ### Check the difference within the transmossion. 
-```{r compare}
-## t test
-t.test(mtcars[mtcars$am == 0,]$mpg, mtcars[mtcars$am==1,]$mpg)
-## boxplot
-library(ggplot2)
-mtcars$trans = mtcars$am
-mtcars[mtcars$am == 0,]$trans = "Auto"
-mtcars[mtcars$am == 1,]$trans = "Manual"
-ggplot(data = mtcars, aes(factor(trans),mpg)) + 
-  geom_boxplot() + 
-  labs(x = 'Transmission', y = "MPG", title = "MPG based on Auto and Manual")
-```
-
-### Check the difference within the transmossion. 
 ```{r diff}
 ## t test
 t.test(mtcars[mtcars$am == 0,]$mpg, mtcars[mtcars$am==1,]$mpg)
@@ -109,8 +95,9 @@ vif(allin)
 
 We find in the all-in data, no variable is significant and there are variables with huge VIFs. So, we have to modified the regression model.
 #### Modifying Process
+Because the process is too tedious, so the code and every result are hide.
 
-```{r modify}
+```{r modify, include=FALSE}
 modified1 = update(allin, mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear)
 summary(modified1)
 vif(modified1)
@@ -133,6 +120,11 @@ summary(modified8)
 ```
 
 After 8th try, we find the finally successful model which contains intersection variable. 
+#### The final result of stepwise process.
+```{r last}
+modified8 = update(allin, mpg ~ wt*am+qsec)
+summary(modified8)
+```
 
 #### check the Final modified model.
 
@@ -141,7 +133,6 @@ Utilized the regsubsets function to check whether the finally modified model wit
 ```{r check}
 library(leaps)
 check <- regsubsets(mpg ~ ., data = mtcars)
-summary(check)
 plot(check, scale = "Cp")
 abline(h = 8, col = "red", lwd = 3)
 ```
