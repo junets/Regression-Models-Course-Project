@@ -1,0 +1,160 @@
+---
+title: "Regression Model"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About the Data Set
+### Description
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models).
+### Format
+A data frame with 32 observations on 11 (numeric) variables.
+
+[, 1]	mpg	Miles/(US) gallon
+
+[, 2]	cyl	Number of cylinders
+
+[, 3]	disp	Displacement (cu.in.)
+
+[, 4]	hp	Gross horsepower
+
+[, 5]	drat	Rear axle ratio
+
+[, 6]	wt	Weight (1000 lbs)
+
+[, 7]	qsec	1/4 mile time
+
+[, 8]	vs	Engine (0 = V-shaped, 1 = straight)
+
+[, 9]	am	Transmission (0 = automatic, 1 = manual)
+
+[,10]	gear	Number of forward gears
+
+[,11]	carb	Number of carburetors
+
+
+### Load and scan the data
+```{r cars}
+data(mtcars)
+summary(mtcars)
+str(mtcars)
+head(mtcars)
+```
+
+### Check the difference within the transmossion. 
+```{r compare}
+## t test
+t.test(mtcars[mtcars$am == 0,]$mpg, mtcars[mtcars$am==1,]$mpg)
+## boxplot
+library(ggplot2)
+mtcars$trans = mtcars$am
+mtcars[mtcars$am == 0,]$trans = "Auto"
+mtcars[mtcars$am == 1,]$trans = "Manual"
+ggplot(data = mtcars, aes(factor(trans),mpg)) + 
+  geom_boxplot() + 
+  labs(x = 'Transmission', y = "MPG", title = "MPG based on Auto and Manual")
+```
+
+### Check the difference within the transmossion. 
+```{r diff}
+## t test
+t.test(mtcars[mtcars$am == 0,]$mpg, mtcars[mtcars$am==1,]$mpg)
+## boxplot
+library(ggplot2)
+mtcars$trans = mtcars$am
+mtcars[mtcars$am == 0,]$trans = "Auto"
+mtcars[mtcars$am == 1,]$trans = "Manual"
+ggplot(data = mtcars, aes(factor(trans),mpg)) + 
+  geom_boxplot() + 
+  labs(x = 'Transmission', y = "MPG", title = "MPG based on Auto and Manual")
+```
+
+From the t-test, we can find that the p value is less than 0.05, so we reject the null hyothesis that there are no difference between the twp group. And we can also drive the conclusion from the plot.
+
+### An aerial view of the correlations between pairs of variables.
+
+```{r view}
+## t test
+mtcars$trans = NULL
+
+pairs(mtcars, panel = panel.smooth)
+library(corrgram)
+corrgram(mtcars, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt,
+         main="Car Milage Data in PC2/PC1 Order")
+
+library(corrplot)
+corrplot(cor(mtcars), method = "ellipse")
+```
+
+Transfer the categorical data to factor
+```{r category}
+for (i in c('cyl', 'vs', 'am', 'gear', 'carb')){
+  mtcars[,i] = factor(mtcars[,i])
+}
+```
+
+### Begin the dealing the data from the all in one, and then use the stepwise regression. Varicance inflation factor is utilized in reviewing the variables.
+
+#### 1st All in model
+```{r allin}
+allin = lm(data = mtcars, mpg ~ .)
+summary(allin)
+library(car)
+vif(allin)
+```
+
+We find in the all-in data, no variable is significant and there are variables with huge VIFs. So, we have to modified the regression model.
+#### Modifying Process
+
+```{r modify}
+modified1 = update(allin, mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear)
+summary(modified1)
+vif(modified1)
+modified2 = update(allin, mpg ~ disp+hp+drat+wt+qsec+vs+am+gear)
+summary(modified2)
+vif(modified2)
+modified3 = update(allin, mpg ~ hp+drat+wt+qsec+vs+am+gear)
+summary(modified3)
+vif(modified3)
+modified4 = update(allin, mpg ~ hp+drat+wt+qsec+vs+am)
+summary(modified4)
+modified5 = update(allin, mpg ~ hp+drat+wt+qsec+am)
+summary(modified5)
+modified6 = update(allin, mpg ~ hp+wt+qsec+am)
+summary(modified6)
+modified7 = update(allin, mpg ~ (wt+qsec)*am)
+summary(modified7)
+modified8 = update(allin, mpg ~ wt*am+qsec)
+summary(modified8)
+```
+
+After 8th try, we find the finally successful model which contains intersection variable. 
+
+#### check the Final modified model.
+
+Utilized the regsubsets function to check whether the finally modified model with the best selected independent variables.
+
+```{r check}
+library(leaps)
+check <- regsubsets(mpg ~ ., data = mtcars)
+summary(check)
+plot(check, scale = "Cp")
+abline(h = 8, col = "red", lwd = 3)
+```
+
+Same variables selected as the stepwise regression process.
+
+#### Plots to show the correlations
+
+```{r plotshow}
+mean(modified8$residuals)
+var(modified8$residuals)
+par(mfrow = c(2, 2))
+plot(modified8)
+```
+
+We checked the mean of the residuals, which is almost zero. And there is no patterns to conclude in the residuals plots, except that the QQ plot does not show a perfect normal distribution.
