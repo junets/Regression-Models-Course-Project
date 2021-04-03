@@ -35,6 +35,8 @@ summary(allin)
 library(car)
 vif(allin)
 
+best.model <- step(allin, direction = "backward")
+
 modified1 = update(allin, mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear)
 summary(modified1)
 vif(modified1)
